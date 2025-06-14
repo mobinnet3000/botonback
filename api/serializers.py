@@ -58,9 +58,41 @@ class SamplingSeriesWriteSerializer(serializers.ModelSerializer):
         model = SamplingSeries
         fields = '__all__'
 
-class SamplingSeriesReadSerializer(SamplingSeriesWriteSerializer):
+class SamplingSeriesReadSerializer(serializers.ModelSerializer):
+    # ! <<-- ۱. یک فیلد جدید برای نام محاسباتی تعریف می‌کنیم --!
+    name = serializers.SerializerMethodField()
+    
+    # فیلد قبلی برای نمایش قالب‌ها
     molds = MoldSerializer(many=True, read_only=True)
 
+    class Meta:
+        model = SamplingSeries
+        # ! <<-- ۲. نام فیلد جدید را به لیست فیلدها اضافه می‌کنیم --!
+        fields = ['id', 'name', 'concrete_temperature', 'ambient_temperature', 'slump', 'range', 'air_percentage', 'has_additive', 'molds', 'sample']
+    
+    # ! <<-- ۳. متد محاسباتی برای تولید نام را پیاده‌سازی می‌کنیم --!
+    def get_name(self, obj: SamplingSeries) -> str:
+        """
+        این متد نام ترتیبی هر سری نمونه را بر اساس ترتیب ساخت آن تولید می‌کند.
+        """
+        # اگر سری نمونه به هیچ نمونه‌ای وصل نبود (برای جلوگیری از خطا)
+        if not obj.sample:
+            return "سری نمونه نامشخص"
+            
+        # تمام سری‌های مربوط به همان نمونه را به ترتیب آی‌دی (زمان ساخت) می‌گیریم
+        all_series_for_sample = obj.sample.series.order_by('id').all()
+        
+        # موقعیت (ایندکس) سری فعلی را در لیست پیدا می‌کنیم
+        try:
+            # تبدیل به لیست برای استفاده از متد index
+            series_list = list(all_series_for_sample)
+            index = series_list.index(obj)
+            # ایندکس از صفر شروع می‌شود، پس ۱ واحد به آن اضافه می‌کنیم
+            return f"سری نمونه {index + 1}"
+        except ValueError:
+            # اگر به هر دلیلی پیدا نشد
+            return "سری نمونه ؟"
+        
 class SampleWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sample
