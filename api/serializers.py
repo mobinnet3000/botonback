@@ -114,18 +114,35 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
 
 class SampleReadSerializer(SampleWriteSerializer):
     series = SamplingSeriesReadSerializer(many=True, read_only=True)
-    transactions = TransactionSerializer(many=True, read_only=True) # لیست تراکنش‌ها
-    # ! <<-- فیلدهای محاسباتی برای خلاصه مالی --!
+
+
+class ProjectReadSerializer(serializers.ModelSerializer):
+    # فیلدهای تو در تو برای خواندن
+    samples = SampleReadSerializer(many=True, read_only=True)
+    transactions = TransactionSerializer(many=True, read_only=True)
+    
+    # فیلدهای محاسباتی برای خلاصه مالی
     total_income = serializers.SerializerMethodField()
     total_expense = serializers.SerializerMethodField()
     balance = serializers.SerializerMethodField()
+    
+    # فرمت خواناتر برای تاریخ
+    created_at = serializers.DateTimeField(read_only=True, format="%Y-%m-%d %H:%M:%S")
 
-    class Meta(ProjectWriteSerializer.Meta):
-        # فیلدهای جدید را به لیست فیلدها اضافه می‌کنیم
-        fields = ProjectWriteSerializer.Meta.fields + ['transactions', 'total_income', 'total_expense', 'balance']
+    class Meta:
+        model = Project
+        # ! <<-- راه‌حل: لیست کامل فیلدها را به صورت صریح تعریف می‌کنیم --!
+        fields = [
+            'id', 'owner', 'created_at', 'file_number', 'project_name', 'client_name', 
+            'client_phone_number', 'supervisor_name', 'supervisor_phone_number', 
+            'requester_name', 'requester_phone_number', 'municipality_zone', 
+            'address', 'project_usage_type', 'floor_count', 'cement_type', 
+            'occupied_area', 'mold_type', 'contract_price',
+            # فیلدهای تو در تو و محاسباتی
+            'samples', 'transactions', 'total_income', 'total_expense', 'balance'
+        ]
 
     def get_total_income(self, obj: Project):
-        # با استفاده از aggregate، جمع تمام واریزی‌ها را از دیتابیس محاسبه می‌کنیم
         total = obj.transactions.filter(type='income').aggregate(total=Sum('amount'))['total']
         return total or 0.0
 
@@ -134,13 +151,8 @@ class SampleReadSerializer(SampleWriteSerializer):
         return total or 0.0
     
     def get_balance(self, obj: Project):
-        income = self.get_total_income(obj)
-        expense = self.get_total_expense(obj)
-        return income - expense
+        return self.get_total_income(obj) - self.get_total_expense(obj)
 
-class ProjectReadSerializer(ProjectWriteSerializer):
-    samples = SampleReadSerializer(many=True, read_only=True)
-    created_at = serializers.DateTimeField(read_only=True, format="%Y-%m-%dT%H:%M:%S")
 
 class LabProfileSerializer(serializers.ModelSerializer):
 
