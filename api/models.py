@@ -16,6 +16,7 @@ class LabProfile(models.Model):
 
 class Project(models.Model):
     owner = models.ForeignKey(LabProfile, on_delete=models.CASCADE, related_name='projects')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ساخت پروژه")
     file_number = models.CharField(max_length=100, verbose_name="شماره پرونده")
     project_name = models.CharField(max_length=255, verbose_name="نام پروژه")
     client_name = models.CharField(max_length=200, verbose_name="نام کارفرما")

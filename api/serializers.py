@@ -73,10 +73,11 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = '__all__'
-        read_only_fields = ('owner',)
+        read_only_fields = ('owner', 'created_at')
 
 class ProjectReadSerializer(ProjectWriteSerializer):
     samples = SampleReadSerializer(many=True, read_only=True)
+    created_at = serializers.DateTimeField(read_only=True, format="%Y-%m-%dT%H:%M:%S")
 
 class LabProfileSerializer(serializers.ModelSerializer):
 
@@ -104,9 +105,6 @@ class LabProfileSerializer(serializers.ModelSerializer):
         
         return super().update(instance, validated_data)
     
-# api/serializers.py
-
-# --- سریالایزر اندپوینت جامع Full-Data ---
 class UserForFullDataSerializer(serializers.ModelSerializer):
     lab_profile = LabProfileSerializer(read_only=True)
     class Meta: model = User; fields = ['id', 'username', 'first_name', 'last_name', 'email', 'lab_profile']
