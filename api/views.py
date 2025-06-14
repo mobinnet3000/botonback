@@ -3,9 +3,9 @@ from rest_framework import viewsets, permissions, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from .models import LabProfile, Project, Sample, SamplingSeries, Mold
+from .models import LabProfile, Project, Sample, SamplingSeries, Mold, Transaction
 from .serializers import (
-    UserRegistrationSerializer, LabProfileSerializer, ProjectReadSerializer, ProjectWriteSerializer,
+    TransactionSerializer, UserRegistrationSerializer, LabProfileSerializer, ProjectReadSerializer, ProjectWriteSerializer,
     SampleReadSerializer, SampleWriteSerializer, SamplingSeriesReadSerializer,
     SamplingSeriesWriteSerializer, MoldSerializer, FullUserDataSerializer
 )
@@ -50,3 +50,11 @@ class SamplingSeriesViewSet(viewsets.ModelViewSet):
 class MoldViewSet(viewsets.ModelViewSet):
     serializer_class = MoldSerializer
     def get_queryset(self): return Mold.objects.filter(series__sample__project__owner__user=self.request.user)
+
+class TransactionViewSet(viewsets.ModelViewSet):
+    serializer_class = TransactionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # هر کاربر فقط تراکنش‌های پروژه‌های خودش را می‌بیند
+        return Transaction.objects.filter(project__owner__user=self.request.user)

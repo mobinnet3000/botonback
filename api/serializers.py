@@ -4,6 +4,14 @@ from django.db import transaction # ! <<-- ایمپورت فراموش شده ب
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import LabProfile, Project, Sample, SamplingSeries, Mold
+from django.db.models import Sum, Q # برای محاسبات روی دیتابیس
+from .models import Transaction # مدل جدید را ایمپورت کنید
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Transaction
+        fields = '__all__'
 
 # --- سریالایزر ثبت نام ---
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -97,15 +105,38 @@ class SampleWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sample
         fields = '__all__'
-
-class SampleReadSerializer(SampleWriteSerializer):
-    series = SamplingSeriesReadSerializer(many=True, read_only=True)
-
+ 
 class ProjectWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = '__all__'
         read_only_fields = ('owner', 'created_at')
+
+class SampleReadSerializer(SampleWriteSerializer):
+    series = SamplingSeriesReadSerializer(many=True, read_only=True)
+    transactions = TransactionSerializer(many=True, read_only=True) # لیست تراکنش‌ها
+    # ! <<-- فیلدهای محاسباتی برای خلاصه مالی --!
+    total_income = serializers.SerializerMethodField()
+    total_expense = serializers.SerializerMethodField()
+    balance = serializers.SerializerMethodField()
+
+    class Meta(ProjectWriteSerializer.Meta):
+        # فیلدهای جدید را به لیست فیلدها اضافه می‌کنیم
+        fields = ProjectWriteSerializer.Meta.fields + ['transactions', 'total_income', 'total_expense', 'balance']
+
+    def get_total_income(self, obj: Project):
+        # با استفاده از aggregate، جمع تمام واریزی‌ها را از دیتابیس محاسبه می‌کنیم
+        total = obj.transactions.filter(type='income').aggregate(total=Sum('amount'))['total']
+        return total or 0.0
+
+    def get_total_expense(self, obj: Project):
+        total = obj.transactions.filter(type='expense').aggregate(total=Sum('amount'))['total']
+        return total or 0.0
+    
+    def get_balance(self, obj: Project):
+        income = self.get_total_income(obj)
+        expense = self.get_total_expense(obj)
+        return income - expense
 
 class ProjectReadSerializer(ProjectWriteSerializer):
     samples = SampleReadSerializer(many=True, read_only=True)
@@ -144,3 +175,4 @@ class UserForFullDataSerializer(serializers.ModelSerializer):
 class FullUserDataSerializer(serializers.Serializer):
     user = UserForFullDataSerializer()
     projects = ProjectReadSerializer(many=True)
+

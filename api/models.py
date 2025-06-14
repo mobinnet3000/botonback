@@ -33,6 +33,8 @@ class Project(models.Model):
     occupied_area = models.FloatField(verbose_name="سطح زیربنا اشغال شده")
     mold_type = models.CharField(max_length=100, verbose_name="نوع قالب")
     client_name = models.CharField(max_length=200); client_phone_number = models.CharField(max_length=20); supervisor_name = models.CharField(max_length=200); supervisor_phone_number = models.CharField(max_length=20); requester_name = models.CharField(max_length=200); requester_phone_number = models.CharField(max_length=20); municipality_zone = models.CharField(max_length=100); address = models.TextField(); project_usage_type = models.CharField(max_length=100); floor_count = models.IntegerField(); cement_type = models.CharField(max_length=100); occupied_area = models.FloatField(); mold_type = models.CharField(max_length=100)
+    contract_price = models.DecimalField(max_digits=20, decimal_places=2, default=0.0, verbose_name="مبلغ کل قرارداد")
+
     def __str__(self): return self.project_name
 
 class Sample(models.Model):
@@ -68,3 +70,19 @@ class Mold(models.Model):
     sample_identifier = models.CharField(max_length=100, verbose_name="نمونه قالب")
     extra_data = models.JSONField(blank=True, null=True, verbose_name="دیتا اضافی")
     def __str__(self): return f"قالب {self.sample_identifier}"
+
+class Transaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('income', 'واریزی'),
+        ('expense', 'هزینه/برداشت'),
+    ]
+    
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='transactions', verbose_name="پروژه")
+    type = models.CharField(max_length=7, choices=TRANSACTION_TYPES, verbose_name="نوع تراکنش")
+    description = models.TextField(verbose_name="توضیحات")
+    # برای مبالغ مالی همیشه از DecimalField استفاده کنید تا خطای اعشار رخ ندهد
+    amount = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="مبلغ")
+    date = models.DateTimeField(verbose_name="تاریخ تراکنش")
+
+    def __str__(self):
+        return f"{self.get_type_display()} - {self.project.project_name}"

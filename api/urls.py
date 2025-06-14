@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 from .views import (
-    UserRegistrationView, FullUserDataView, LabProfileViewSet, ProjectViewSet, 
+    TransactionViewSet, UserRegistrationView, FullUserDataView, LabProfileViewSet, ProjectViewSet, 
     SampleViewSet, SamplingSeriesViewSet, MoldViewSet
 )
 
@@ -13,6 +13,7 @@ router.register(r'projects', ProjectViewSet, basename='project')
 router.register(r'samples', SampleViewSet, basename='sample')
 router.register(r'series', SamplingSeriesViewSet, basename='series')
 router.register(r'molds', MoldViewSet, basename='mold')
+router.register(r'transactions', TransactionViewSet, basename='transaction')
 
 urlpatterns = [
     # اندپوینت‌های CRUD
