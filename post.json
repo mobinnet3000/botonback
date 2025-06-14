@@ -1,7 +1,7 @@
 {
 	"info": {
-		"_postman_id": "a8c1f3d4-e5b6-4f7a-8b9c-d0d1e2f3a4b5",
-		"name": "API نهایی آزمایشگاه بتن (نسخه کامل)",
+		"_postman_id": "e4a5b6c7-d8e9-f0a1-b2c3-d4e5f6a7b8c9",
+		"name": "API نهایی آزمایشگاه بتن (جامع)",
 		"description": "نسخه نهایی و کامل شامل اندپوینت‌های ثبت نام، لاگین، دریافت جامع دیتا و تمام اندپوینت‌های CRUD با سیستم احراز هویت توکن و زنجیره هوشمند.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -14,73 +14,19 @@
 					"request": {
 						"method": "POST",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"finaluser_full\",\n    \"password\": \"someSecurePassword123\",\n    \"first_name\": \"کاربر\",\n    \"last_name\": \"کامل\",\n    \"email\": \"full@example.com\",\n    \"lab_name\": \"آزمایشگاه جامع و کامل\",\n    \"lab_mobile_number\": \"09121112233\",\n    \"lab_address\": \"تهران، میدان آزادی، پلاک ۱\",\n    \"province\": \"تهران\",\n    \"city\": \"تهران\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/register/",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"register",
-								""
-							]
-						}
-					},
-					"response": []
+						"body": { "mode": "raw", "raw": "{\n    \"username\": \"finaluser_full\",\n    \"password\": \"someSecurePassword123\",\n    \"first_name\": \"کاربر\",\n    \"last_name\": \"جامع\",\n    \"email\": \"full@example.com\",\n    \"lab_name\": \"آزمایشگاه جامع و کامل\",\n    \"lab_mobile_number\": \"09121112233\",\n    \"lab_address\": \"تهران، میدان آزادی، پلاک ۱\",\n    \"province\": \"تهران\",\n    \"city\": \"تهران\"\n}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{baseUrl}}/api/register/", "host": [ "{{baseUrl}}" ], "path": [ "api", "register", "" ] }
+					}, "response": []
 				},
 				{
 					"name": "Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    var jsonData = pm.response.json();",
-									"    if (jsonData.token) {",
-									"        pm.collectionVariables.set(\"authToken\", jsonData.token);",
-									"        console.log(\"Auth Token saved.\");",
-									"    }",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
+					"event": [ { "listen": "test", "script": { "exec": [ "if (pm.response.code === 200) {", "    var jsonData = pm.response.json();", "    if (jsonData.token) {", "        pm.collectionVariables.set(\"authToken\", jsonData.token);", "        console.log(\"Auth Token saved.\");", "    }", "}" ], "type": "text/javascript" } } ],
 					"request": {
 						"method": "POST",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"finaluser_full\",\n    \"password\": \"someSecurePassword123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/login/",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"login",
-								""
-							]
-						}
-					},
-					"response": []
+						"body": { "mode": "raw", "raw": "{\n    \"username\": \"finaluser_full\",\n    \"password\": \"someSecurePassword123\"\n}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{baseUrl}}/api/login/", "host": [ "{{baseUrl}}" ], "path": [ "api", "login", "" ] }
+					}, "response": []
 				}
 			]
 		},
@@ -89,42 +35,8 @@
 			"item": [
 				{
 					"name": "Get Full User Data",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    var jsonData = pm.response.json();",
-									"    if (jsonData.user && jsonData.user.lab_profile) {",
-									"        pm.collectionVariables.set(\"profileId\", jsonData.user.lab_profile.id);",
-									"        console.log(\"Profile ID saved: \" + jsonData.user.lab_profile.id);",
-									"    }",
-									"    if (jsonData.projects && jsonData.projects.length > 0) {",
-									"        pm.collectionVariables.set(\"projectId\", jsonData.projects[0].id);",
-									"        console.log(\"First Project ID saved from full-data: \" + jsonData.projects[0].id);",
-									"    }",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/full-data/",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"full-data",
-								""
-							]
-						}
-					},
+					"event": [ { "listen": "test", "script": { "exec": [ "if (pm.response.code === 200) {", "    var jsonData = pm.response.json();", "    if (jsonData.user && jsonData.user.lab_profile) {", "        pm.collectionVariables.set(\"profileId\", jsonData.user.lab_profile.id);", "        console.log(\"Profile ID saved: \" + jsonData.user.lab_profile.id);", "    }", "    if (jsonData.projects && jsonData.projects.length > 0) {", "        pm.collectionVariables.set(\"projectId\", jsonData.projects[0].id);", "        console.log(\"First Project ID saved from full-data: \" + jsonData.projects[0].id);", "    }", "}" ], "type": "text/javascript" } } ],
+					"request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/full-data/", "host": [ "{{baseUrl}}" ], "path": [ "api", "full-data", "" ] } },
 					"response": []
 				}
 			]
@@ -135,55 +47,8 @@
 				{
 					"name": "Profile",
 					"item": [
-						{
-							"name": "Get My Profile",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/api/profiles/{{profileId}}/",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"api",
-										"profiles",
-										"{{profileId}}",
-										""
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Update My Profile (PUT)",
-							"request": {
-								"method": "PUT",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"first_name\": \"نام آپدیت شده\",\n    \"last_name\": \"فامیلی آپدیت شده\",\n    \"email\": \"new.email.final@example.com\",\n    \"lab_name\": \"آزمایشگاه آپدیت شده\",\n    \"lab_mobile_number\": \"09129998877\",\n    \"lab_address\": \"آدرس جدید\",\n    \"province\": \"استان جدید\",\n    \"city\": \"شهر جدید\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{baseUrl}}/api/profiles/{{profileId}}/",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"api",
-										"profiles",
-										"{{profileId}}",
-										""
-									]
-								}
-							},
-							"response": []
-						}
+						{ "name": "Get My Profile", "request": { "method": "GET", "url": "{{baseUrl}}/api/profiles/{{profileId}}/" }, "response": [] },
+						{ "name": "Update My Profile (PUT)", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\n    \"first_name\": \"نام جدید\",\n    \"last_name\": \"فامیلی جدید\",\n    \"email\": \"new.email.final@example.com\",\n    \"lab_name\": \"آزمایشگاه آپدیت شده\",\n    \"lab_mobile_number\": \"09129998877\",\n    \"lab_address\": \"آدرس جدید\",\n    \"province\": \"استان جدید\",\n    \"city\": \"شهر جدید\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/profiles/{{profileId}}/" }, "response": [] }
 					]
 				},
 				{
@@ -211,13 +76,15 @@
 						{ "name": "List Samples", "request": { "method": "GET", "url": "{{baseUrl}}/api/samples/" }, "response": [] },
 						{ "name": "Create Sample", "event": [ { "listen": "test", "script": { "exec": [ "if (pm.response.code === 201) { var jsonData = pm.response.json(); pm.collectionVariables.set(\"sampleId\", jsonData.id); }" ], "type": "text/javascript" } } ], "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\n    \"project\": {{projectId}},\n    \"date\": \"2025-09-10T10:00:00Z\",\n    \"test_type\": \"فشاری\",\n    \"sampling_volume\": \"4 m3\",\n    \"cement_grade\": \"C25\",\n    \"category\": \"دیوار برشی\",\n    \"weather_condition\": \"معتدل\",\n    \"concrete_factory\": \"بتن شرق\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/samples/" }, "response": [] },
 						{ "name": "Get Single Sample", "request": { "method": "GET", "url": "{{baseUrl}}/api/samples/{{sampleId}}/" }, "response": [] },
+						{ "name": "Update Sample", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\n    \"project\": {{projectId}},\n    \"date\": \"2025-09-10T11:00:00Z\",\n    \"test_type\": \"فشاری (آپدیت شده)\",\n    \"sampling_volume\": \"4.5 m3\",\n    \"cement_grade\": \"C30\",\n    \"category\": \"دیوار برشی\",\n    \"weather_condition\": \"آفتابی\",\n    \"concrete_factory\": \"بتن شرق\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/samples/{{sampleId}}/" }, "response": [] },
 						{ "name": "Delete Sample", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/samples/{{sampleId}}/" }, "response": [] }
 					]
 				},
 				{
 					"name": "Sampling Series",
 					"item": [
-						{ "name": "Create Series", "event": [ { "listen": "test", "script": { "exec": [ "if (pm.response.code === 201) { var jsonData = pm.response.json(); pm.collectionVariables.set(\"seriesId\", jsonData.id); }" ], "type": "text/javascript" } } ], "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\n    \"sample\": {{sampleId}},\n    \"concrete_temperature\": 29.0,\n    \"ambient_temperature\": 31.0,\n    \"slump\": 7.5,\n    \"range\": \"7-9\",\n    \"air_percentage\": 2.0,\n    \"has_additive\": false\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/series/" }, "response": [] }
+						{ "name": "Create Series", "event": [ { "listen": "test", "script": { "exec": [ "if (pm.response.code === 201) { var jsonData = pm.response.json(); pm.collectionVariables.set(\"seriesId\", jsonData.id); }" ], "type": "text/javascript" } } ], "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\n    \"sample\": {{sampleId}},\n    \"concrete_temperature\": 29.0,\n    \"ambient_temperature\": 31.0,\n    \"slump\": 7.5,\n    \"range\": \"7-9\",\n    \"air_percentage\": 2.0,\n    \"has_additive\": false\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/series/" }, "response": [] },
+						{ "name": "List All Series", "request": { "method": "GET", "url": "{{baseUrl}}/api/series/" }, "response": [] }
 					]
 				},
 				{
@@ -235,7 +102,8 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					"// این اسکریپت در تمام درخواست‌ها، هدر احراز هویت را به صورت خودکار اضافه می‌کند",
+					"// This script automatically adds the authorization header to every request",
+					"// in folders that need authentication.",
 					"const token = pm.collectionVariables.get(\"authToken\");",
 					"if (token) {",
 					"    pm.request.headers.add({",
