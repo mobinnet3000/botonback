@@ -1,8 +1,8 @@
 {
 	"info": {
-		"_postman_id": "d0e1f2a3-b4c5-4d6e-7f8a-9b0c1d2e3f4a",
-		"name": "API نهایی آزمایشگاه بتن",
-		"description": "نسخه نهایی و کامل شامل اندپوینت‌های ثبت نام، لاگین، دریافت جامع دیتا و تمام اندپوینت‌های CRUD با سیستم احراز هویت توکن و زنجیره هوشمند.",
+		"_postman_id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+		"name": "API آزمایشگاه بتن (نسخه به‌روز شده)",
+		"description": "نسخه کامل و به‌روز شده شامل تمام اندپوینت‌های CRUD برای مدل‌های Project, Sample, Series, Mold و Transaction. این مجموعه از سیستم احراز هویت توکن پشتیبانی می‌کند.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"finaluser\",\n    \"password\": \"someSecurePassword123\",\n    \"first_name\": \"کاربر\",\n    \"last_name\": \"نهایی\",\n    \"email\": \"final@example.com\",\n    \"lab_name\": \"آزمایشگاه جامع تهران\",\n    \"lab_mobile_number\": \"09121112233\",\n    \"lab_address\": \"تهران، میدان آزادی\",\n    \"province\": \"تهران\",\n    \"city\": \"تهران\"\n}",
+							"raw": "{\n    \"username\": \"new_test_user\",\n    \"password\": \"strongPassword123!\",\n    \"first_name\": \"کاربر\",\n    \"last_name\": \"تستی\",\n    \"email\": \"test.user@example.com\",\n    \"lab_name\": \"آزمایشگاه مرکزی\",\n    \"lab_mobile_number\": \"09120000000\",\n    \"lab_address\": \"تهران، خیابان اصلی\",\n    \"province\": \"تهران\",\n    \"city\": \"تهران\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -61,7 +61,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"finaluser\",\n    \"password\": \"someSecurePassword123\"\n}",
+							"raw": "{\n    \"username\": \"new_test_user\",\n    \"password\": \"strongPassword123!\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -103,6 +103,25 @@
 									"    if (jsonData.projects && jsonData.projects.length > 0) {",
 									"        pm.collectionVariables.set(\"projectId\", jsonData.projects[0].id);",
 									"        console.log(\"First Project ID saved: \" + jsonData.projects[0].id);",
+									"        const firstProject = jsonData.projects[0];",
+									"        if (firstProject.samples && firstProject.samples.length > 0) {",
+									"             pm.collectionVariables.set(\"sampleId\", firstProject.samples[0].id);",
+									"             console.log(\"First Sample ID saved: \" + firstProject.samples[0].id);",
+									"             const firstSample = firstProject.samples[0];",
+									"             if(firstSample.series && firstSample.series.length > 0) {",
+									"                  pm.collectionVariables.set(\"seriesId\", firstSample.series[0].id);",
+									"                  console.log(\"First Series ID saved: \" + firstSample.series[0].id);",
+									"                  const firstSeries = firstSample.series[0];",
+									"                  if(firstSeries.molds && firstSeries.molds.length > 0){",
+									"                        pm.collectionVariables.set(\"moldId\", firstSeries.molds[0].id);",
+									"                        console.log(\"First Mold ID saved: \" + firstSeries.molds[0].id);",
+									"                  }",
+									"             }",
+									"        }",
+									"        if (firstProject.transactions && firstProject.transactions.length > 0) {",
+									"             pm.collectionVariables.set(\"transactionId\", firstProject.transactions[0].id);",
+									"             console.log(\"First Transaction ID saved: \" + firstProject.transactions[0].id);",
+									"        }",
 									"    }",
 									"}"
 								],
@@ -184,7 +203,7 @@
 			]
 		},
 		{
-			"name": "4. Manage Projects",
+			"name": "3. Manage Projects",
 			"item": [
 				{
 					"name": "List Projects",
@@ -207,27 +226,12 @@
 				},
 				{
 					"name": "Create Project",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 201) {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set(\"projectId\", jsonData.id);",
-									"    console.log(\"Project ID saved: \" + jsonData.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"file_number\": \"P-101\",\n    \"project_name\": \"اولین پروژه از CRUD\",\n    \"client_name\": \"کارفرما ۱\",\n    \"client_phone_number\": \"0211111\",\n    \"supervisor_name\": \"ناظر ۱\",\n    \"supervisor_phone_number\": \"0912111\",\n    \"requester_name\": \"درخواست دهنده ۱\",\n    \"requester_phone_number\": \"0910111\",\n    \"municipality_zone\": \"منطقه ۱\",\n    \"address\": \"آدرس پروژه ۱\",\n    \"project_usage_type\": \"تجاری\",\n    \"floor_count\": 8,\n    \"cement_type\": \"تیپ ۵\",\n    \"occupied_area\": 1200,\n    \"mold_type\": \"فلزی\"\n}",
+							"raw": "{\n    \"file_number\": \"P-202\",\n    \"project_name\": \"پروژه جدید از Postman\",\n    \"client_name\": \"شرکت سازنده نوین\",\n    \"client_phone_number\": \"02188888888\",\n    \"supervisor_name\": \"مهندس احمدی\",\n    \"supervisor_phone_number\": \"09121234567\",\n    \"requester_name\": \"آقای محمدی\",\n    \"requester_phone_number\": \"09101234567\",\n    \"municipality_zone\": \"منطقه 5\",\n    \"address\": \"تهران، جنت آباد\",\n    \"project_usage_type\": \"مسکونی\",\n    \"floor_count\": 12,\n    \"cement_type\": \"تیپ 2\",\n    \"occupied_area\": 1500.5,\n    \"mold_type\": \"پلاستیکی\",\n    \"contract_price\": 500000000.00\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -252,55 +256,6 @@
 					"name": "Get Single Project",
 					"request": {
 						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/projects/{{projectId}}/",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"projects",
-								"{{projectId}}",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update Project",
-					"request": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"file_number\": \"P-101-UPDATED\",\n    \"project_name\": \"اولین پروژه (آپدیت شده)\",\n    \"client_name\": \"کارفرما ۱\",\n    \"client_phone_number\": \"0211111\",\n    \"supervisor_name\": \"ناظر ۱\",\n    \"supervisor_phone_number\": \"0912111\",\n    \"requester_name\": \"درخواست دهنده ۱\",\n    \"requester_phone_number\": \"0910111\",\n    \"municipality_zone\": \"منطقه ۱\",\n    \"address\": \"آدرس پروژه ۱\",\n    \"project_usage_type\": \"تجاری\",\n    \"floor_count\": 8,\n    \"cement_type\": \"تیپ ۵\",\n    \"occupied_area\": 1200,\n    \"mold_type\": \"فلزی\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/projects/{{projectId}}/",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"projects",
-								"{{projectId}}",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Project",
-					"request": {
-						"method": "DELETE",
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/projects/{{projectId}}/",
@@ -579,6 +534,185 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "4. Manage Transactions",
+			"item": [
+				{
+					"name": "List Transactions",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {},
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Transaction (Income)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"project\": {{projectId}},\n    \"type\": \"income\",\n    \"description\": \"پرداخت قسط اول قرارداد\",\n    \"amount\": \"150000000.00\",\n    \"date\": \"2025-06-15T12:00:00Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Transaction (Expense)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"project\": {{projectId}},\n    \"type\": \"expense\",\n    \"description\": \"هزینه خرید تجهیزات آزمایشگاه\",\n    \"amount\": \"25000000.00\",\n    \"date\": \"2025-06-20T14:30:00Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Transaction",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/{{transactionId}}/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"{{transactionId}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Manage Tickets (سیستم تیکتینگ)",
+			"item": [
+				{
+					"name": "Create New Ticket",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set(\"ticketId\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"مشکل در اتصال به API\",\n    \"priority\": \"high\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tickets/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"tickets",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Message to a Ticket",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ticket\": {{ticketId}},\n    \"message\": \"سلام، من با خطای CORS مواجه شده‌ام. لطفا راهنمایی کنید.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ticket-messages/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ticket-messages",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
@@ -628,6 +762,14 @@
 		},
 		{
 			"key": "moldId",
+			"value": ""
+		},
+		{
+			"key": "ticketId",
+			"value": ""
+		},
+		{
+			"key": "transactionId",
 			"value": ""
 		}
 	]

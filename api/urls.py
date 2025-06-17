@@ -3,8 +3,9 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 from .views import (
-    UserRegistrationView, FullUserDataView, LabProfileViewSet, ProjectViewSet, 
-    SampleViewSet, SamplingSeriesViewSet, MoldViewSet
+    TransactionViewSet, UserRegistrationView, FullUserDataView, LabProfileViewSet, ProjectViewSet, 
+    SampleViewSet, SamplingSeriesViewSet, MoldViewSet,
+    TicketViewSet, TicketMessageViewSet # ✅ ویوهای جدید ایمپورت شدند
 )
 
 router = DefaultRouter()
@@ -13,6 +14,10 @@ router.register(r'projects', ProjectViewSet, basename='project')
 router.register(r'samples', SampleViewSet, basename='sample')
 router.register(r'series', SamplingSeriesViewSet, basename='series')
 router.register(r'molds', MoldViewSet, basename='mold')
+router.register(r'transactions', TransactionViewSet, basename='transaction')
+router.register(r'tickets', TicketViewSet, basename='ticket') # ✅ اندپوینت تیکت‌ها
+router.register(r'ticket-messages', TicketMessageViewSet, basename='ticket-message') # ✅ اندپوینت پیام‌ها
+
 
 urlpatterns = [
     # اندپوینت‌های CRUD
