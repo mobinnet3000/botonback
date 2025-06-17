@@ -1,7 +1,7 @@
 {
 	"info": {
-		"_postman_id": "d0e1f2a3-b4c5-4d6e-7f8a-9b0c1d2e3f4a",
-		"name": "API نهایی آزمایشگاه بتن",
+		"_postman_id": "e4a5b6c7-d8e9-f0a1-b2c3-d4e5f6a7b8c9",
+		"name": "API نهایی آزمایشگاه بتن (جامع)",
 		"description": "نسخه نهایی و کامل شامل اندپوینت‌های ثبت نام، لاگین، دریافت جامع دیتا و تمام اندپوینت‌های CRUD با سیستم احراز هویت توکن و زنجیره هوشمند.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -85,7 +85,7 @@
 			]
 		},
 		{
-			"name": "2. All User Data (Endpoint جامع)",
+			"name": "2. Main Data Endpoint",
 			"item": [
 				{
 					"name": "Get Full User Data",
@@ -130,7 +130,7 @@
 			]
 		},
 		{
-			"name": "3. Manage Profile",
+			"name": "3. CRUD Operations",
 			"item": [
 				{
 					"name": "Get My Profile",
@@ -590,6 +590,8 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
+					"// This script automatically adds the authorization header to every request",
+					"// in folders that need authentication.",
 					"const token = pm.collectionVariables.get(\"authToken\");",
 					"if (token) {",
 					"    pm.request.headers.add({",

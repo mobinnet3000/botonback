@@ -154,6 +154,12 @@ class SampleWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sample
         fields = '__all__'
+ 
+class ProjectWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = '__all__'
+        read_only_fields = ('owner', 'created_at')
 
 class SampleReadSerializer(SampleWriteSerializer):
     series = SamplingSeriesReadSerializer(many=True, read_only=True)
