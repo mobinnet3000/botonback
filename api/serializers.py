@@ -3,6 +3,8 @@
 from django.db import transaction # ! <<-- ایمپورت فراموش شده برای تراکنش
 from rest_framework import serializers
 from django.contrib.auth.models import User
+
+from api.tests import namee
 from .models import LabProfile, Project, Sample, SamplingSeries, Mold, Ticket, TicketMessage 
 from django.db.models import Sum, Q # برای محاسبات روی دیتابیس
 from .models import Transaction # مدل جدید را ایمپورت کنید
@@ -117,7 +119,7 @@ class SamplingSeriesWriteSerializer(serializers.ModelSerializer):
             'id', 'sample', 'concrete_temperature', 'ambient_temperature',
             'slump', 'range', 'air_percentage', 'has_additive', 'mold_ages'
         ]
-
+    
     @transaction.atomic  # تضمین می‌کند که تمام عملیات با هم انجام شوند یا هیچکدام
     def create(self, validated_data):
         # ۱. لیست سن قالب‌ها را از داده‌های ورودی جدا می‌کنیم
@@ -139,7 +141,7 @@ class SamplingSeriesWriteSerializer(serializers.ModelSerializer):
                     breaking_load=0.0,
                     deadline=now + timedelta(days=age),
                     # یک شناسه پیش‌فرض برای نمونه قالب می‌سازیم
-                    sample_identifier=f"{series_instance.sample.category}-{age}d-{i+1}"
+                    sample_identifier=f"{series_instance.sample.category}-{age}روزه-{namee(series_instance)}"
                 )
             )
         
@@ -148,6 +150,7 @@ class SamplingSeriesWriteSerializer(serializers.ModelSerializer):
             Mold.objects.bulk_create(molds_to_create)
             
         return series_instance
+     
 
 class SamplingSeriesReadSerializer(serializers.ModelSerializer):
     # ! <<-- ۱. یک فیلد جدید برای نام محاسباتی تعریف می‌کنیم --!
