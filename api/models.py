@@ -63,15 +63,15 @@ class SamplingSeries(models.Model):
     def __str__(self): return f"سری برای نمونه {self.sample.id}"
 
 class Mold(models.Model):
-    series = models.ForeignKey(SamplingSeries, on_delete=models.CASCADE, related_name='molds')
-    age_in_days = models.IntegerField(verbose_name="چند روزه")
-    mass = models.FloatField(verbose_name="جرم")
-    breaking_load = models.FloatField(verbose_name="بار گسیختگی")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان ایجاد شدن")
-    completed_at = models.DateTimeField(blank=True, null=True, verbose_name="زمان انجام")
-    deadline = models.DateTimeField(verbose_name="زمان ددلاین")
-    sample_identifier = models.CharField(max_length=100, verbose_name="نمونه قالب")
-    extra_data = models.JSONField(blank=True, null=True, verbose_name="دیتا اضافی")
+    series = models.ForeignKey('SamplingSeries', related_name='molds', on_delete=models.CASCADE)
+    age_in_days = models.IntegerField()
+    mass = models.FloatField(default=0.0, blank=True, null=True)
+    breaking_load = models.FloatField(default=0.0, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    deadline = models.DateTimeField()
+    sample_identifier = models.CharField(max_length=100)
+    extra_data = models.JSONField(default=dict, blank=True)
     def __str__(self): return f"قالب {self.sample_identifier}"
 
 class Transaction(models.Model):

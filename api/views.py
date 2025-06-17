@@ -50,8 +50,17 @@ class SamplingSeriesViewSet(viewsets.ModelViewSet):
         return SamplingSeriesWriteSerializer
 
 class MoldViewSet(viewsets.ModelViewSet):
+    queryset = Mold.objects.all()
     serializer_class = MoldSerializer
-    def get_queryset(self): return Mold.objects.filter(series__sample__project__owner__user=self.request.user)
+    permission_classes = [permissions.IsAuthenticated] # اطمینان از اینکه کاربر لاگین کرده
+
+    def get_queryset(self):
+        """
+        فقط قالب‌های مربوط به کاربر لاگین کرده را نمایش بده.
+        این کار امنیت API را تضمین می‌کند.
+        """
+        user = self.request.user
+        return Mold.objects.filter(series__sample__project__user_profile__user=user)
 
 class TransactionViewSet(viewsets.ModelViewSet):
     serializer_class = TransactionSerializer
