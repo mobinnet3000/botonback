@@ -61,9 +61,43 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 # --- سریالایزرهای CRUD ---
 
 class MoldSerializer(serializers.ModelSerializer):
+    is_done = serializers.SerializerMethodField()
     class Meta:
         model = Mold
-        fields = '__all__'
+        fields = [
+            'id',
+            'series',
+            'age_in_days',
+            'mass',
+            'breaking_load',
+            'created_at',
+            'completed_at',
+            'deadline',
+            'sample_identifier',
+            'extra_data',
+            'is_done', # اضافه کردن فیلد جدید به لیست
+        ]
+        # برای جلوگیری از آپدیت ناخواسته، می‌توان برخی فیلدها را در زمان آپدیت فقط خواندنی کرد
+        read_only_fields = ['id', 'created_at', 'deadline', 'series', 'age_in_days', 'is_done']
+
+    def get_is_done(self, obj):
+        """
+        این متد وضعیت 'is_done' را بر اساس منطق شما محاسبه می‌کند.
+        اگر بار گسیختگی (breaking_load) مقداری داشته باشد، یعنی قالب شکسته شده است.
+        """
+        return obj.breaking_load is not None and obj.breaking_load > 0
+
+    def update(self, instance, validated_data):
+        print("--- DEBUG: Inside Serializer Update ---")
+        print("Received data:", validated_data)
+        
+        instance.mass = validated_data.get('mass', instance.mass)
+        instance.breaking_load = validated_data.get('breaking_load', instance.breaking_load)
+        instance.completed_at = validated_data.get('completed_at', instance.completed_at)
+        
+        instance.save()
+        print("--- DEBUG: Data saved! ---")
+        return instance
 
 class SamplingSeriesWriteSerializer(serializers.ModelSerializer):
     """
