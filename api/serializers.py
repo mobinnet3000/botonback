@@ -88,15 +88,15 @@ class MoldSerializer(serializers.ModelSerializer):
         return obj.breaking_load is not None and obj.breaking_load > 0
 
     def update(self, instance, validated_data):
-        """
-        هنگام آپدیت، اگر تاریخ تکمیل (completed_at) ارسال شده باشد،
-        آن را در نمونه ذخیره می‌کنیم.
-        """
+        print("--- DEBUG: Inside Serializer Update ---")
+        print("Received data:", validated_data)
+        
         instance.mass = validated_data.get('mass', instance.mass)
         instance.breaking_load = validated_data.get('breaking_load', instance.breaking_load)
         instance.completed_at = validated_data.get('completed_at', instance.completed_at)
         
         instance.save()
+        print("--- DEBUG: Data saved! ---")
         return instance
 
 class SamplingSeriesWriteSerializer(serializers.ModelSerializer):

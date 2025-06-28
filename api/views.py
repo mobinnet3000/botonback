@@ -50,17 +50,24 @@ class SamplingSeriesViewSet(viewsets.ModelViewSet):
         return SamplingSeriesWriteSerializer
 
 class MoldViewSet(viewsets.ModelViewSet):
-    queryset = Mold.objects.all()
+    """
+    این ViewSet تمام عملیات CRUD را برای مدل Mold مدیریت می‌کند.
+    """
     serializer_class = MoldSerializer
-    permission_classes = [permissions.IsAuthenticated] # اطمینان از اینکه کاربر لاگین کرده
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         """
         فقط قالب‌های مربوط به کاربر لاگین کرده را نمایش بده.
-        این کار امنیت API را تضمین می‌کند.
         """
         user = self.request.user
-        return Mold.objects.filter(series__sample__project__user_profile__user=user)
+        
+        # ----------------------------------------------------
+        #  ✅✅✅ راه حل نهایی اینجاست ✅✅✅
+        # مسیر صحیح برای فیلتر کردن، استفاده از 'owner' است نه 'user_profile'
+        # چون در مدل Project شما، فیلد اتصال به LabProfile، نامش 'owner' است.
+        # ----------------------------------------------------
+        return Mold.objects.filter(series__sample__project__owner__user=user)
 
 class TransactionViewSet(viewsets.ModelViewSet):
     serializer_class = TransactionSerializer
