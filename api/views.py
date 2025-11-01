@@ -1,116 +1,185 @@
 # api/views.py
-from rest_framework import viewsets, permissions, generics
+
+from rest_framework import viewsets, permissions, generics, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from .models import LabProfile, Project, Sample, SamplingSeries, Mold, Transaction,Ticket, TicketMessage
-from .serializers import (
-    TransactionSerializer, UserRegistrationSerializer, LabProfileSerializer, ProjectReadSerializer, ProjectWriteSerializer,
-    SampleReadSerializer, SampleWriteSerializer, SamplingSeriesReadSerializer,
-    SamplingSeriesWriteSerializer, MoldSerializer, FullUserDataSerializer
-        ,TicketSerializer, TicketMessageSerializer # ✅ سریالایزرهای جدید ایمپورت شدند
 
+from .models import (
+    LabProfile, Project, Sample, SamplingSeries, Mold, Transaction, Ticket, TicketMessage, SamplingSeriesPhoto
+)
+from .serializers import (
+    TransactionSerializer, UserRegistrationSerializer, LabProfileSerializer,
+    ProjectReadSerializer, ProjectWriteSerializer,
+    SampleReadSerializer, SampleWriteSerializer,
+    SamplingSeriesReadSerializer, SamplingSeriesWriteSerializer,
+    SamplingSeriesPhotoSerializer,
+    MoldSerializer, FullUserDataSerializer,
+    TicketSerializer, TicketMessageSerializer
 )
 
-# --- ویوهای اصلی ---
+
+# ----------------------
+# ثبت نام
+# ----------------------
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [permissions.AllowAny]
     serializer_class = UserRegistrationSerializer
 
+
+# ----------------------
+# Full data
+# ----------------------
+# api/views.py
+
 class FullUserDataView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
-        data = {'user': request.user, 'projects': Project.objects.filter(owner__user=request.user)}
+        # فقط ستون‌های موجود را انتخاب می‌کنیم تا اگر مدل اشتباهاً فیلدی مثل test_type دارد، DB لازم نباشد آن را برگرداند
+        projects_qs = (
+            Project.objects
+            .filter(owner__user=request.user)
+            .select_related('owner')
+            .prefetch_related(
+                'samples',
+                'samples__series',
+                'samples__series__molds',
+                'transactions',
+            )
+            .only(
+                'id', 'owner', 'created_at', 'file_number', 'project_name',
+                'client_name', 'client_phone_number',
+                'supervisor_name', 'supervisor_phone_number',
+                'requester_name', 'requester_phone_number',
+                'municipality_zone', 'address', 'project_usage_type',
+                'floor_count', 'occupied_area',
+                'contract_price',
+            )
+        )
+
+        data = {
+            'user': request.user,
+            'projects': projects_qs,
+        }
         serializer = FullUserDataSerializer(data)
         return Response(serializer.data)
 
-# --- ViewSet های CRUD ---
+# ----------------------
+# Lab Profile
+# ----------------------
 class LabProfileViewSet(viewsets.ModelViewSet):
     serializer_class = LabProfileSerializer
-    def get_queryset(self): return LabProfile.objects.filter(user=self.request.user)
-
-class ProjectViewSet(viewsets.ModelViewSet):
-    def get_queryset(self): return Project.objects.filter(owner__user=self.request.user)
-    def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']: return ProjectReadSerializer
-        return ProjectWriteSerializer
-    def perform_create(self, serializer): serializer.save(owner=self.request.user.lab_profile)
-
-class SampleViewSet(viewsets.ModelViewSet):
-    def get_queryset(self): return Sample.objects.filter(project__owner__user=self.request.user)
-    def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']: return SampleReadSerializer
-        return SampleWriteSerializer
-
-class SamplingSeriesViewSet(viewsets.ModelViewSet):
-    def get_queryset(self): return SamplingSeries.objects.filter(sample__project__owner__user=self.request.user)
-    def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']: return SamplingSeriesReadSerializer
-        return SamplingSeriesWriteSerializer
-
-class MoldViewSet(viewsets.ModelViewSet):
-    """
-    این ViewSet تمام عملیات CRUD را برای مدل Mold مدیریت می‌کند.
-    """
-    serializer_class = MoldSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        فقط قالب‌های مربوط به کاربر لاگین کرده را نمایش بده.
-        """
-        user = self.request.user
-        
-        # ----------------------------------------------------
-        #  ✅✅✅ راه حل نهایی اینجاست ✅✅✅
-        # مسیر صحیح برای فیلتر کردن، استفاده از 'owner' است نه 'user_profile'
-        # چون در مدل Project شما، فیلد اتصال به LabProfile، نامش 'owner' است.
-        # ----------------------------------------------------
-        return Mold.objects.filter(series__sample__project__owner__user=user)
+        return LabProfile.objects.filter(user=self.request.user)
 
+
+# ----------------------
+# Project
+# ----------------------
+class ProjectViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Project.objects.filter(owner__user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return ProjectReadSerializer
+        return ProjectWriteSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user.lab_profile)
+
+
+# ----------------------
+# Sample
+# ----------------------
+class SampleViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Sample.objects.filter(project__owner__user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return SampleReadSerializer
+        return SampleWriteSerializer
+
+
+# ----------------------
+# Sampling Series
+# ----------------------
+class SamplingSeriesViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+
+    def get_queryset(self):
+        return SamplingSeries.objects.filter(sample__project__owner__user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return SamplingSeriesReadSerializer
+        return SamplingSeriesWriteSerializer
+
+
+# ----------------------
+# Sampling Series Photos
+# ----------------------
+class SamplingSeriesPhotoViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = SamplingSeriesPhotoSerializer
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+
+    def get_queryset(self):
+        return SamplingSeriesPhoto.objects.filter(series__sample__project__owner__user=self.request.user)
+
+
+# ----------------------
+# Mold
+# ----------------------
+class MoldViewSet(viewsets.ModelViewSet):
+    serializer_class = MoldSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+
+    def get_queryset(self):
+        return Mold.objects.filter(series__sample__project__owner__user=self.request.user)
+
+
+# ----------------------
+# Transaction
+# ----------------------
 class TransactionViewSet(viewsets.ModelViewSet):
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # هر کاربر فقط تراکنش‌های پروژه‌های خودش را می‌بیند
         return Transaction.objects.filter(project__owner__user=self.request.user)
+
+
+# ----------------------
+# Ticketing
+# ----------------------
 class TicketViewSet(viewsets.ModelViewSet):
-    """
-    این ViewSet به کاربران اجازه می‌دهد تیکت‌های خود را مدیریت کنند.
-    """
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        هر کاربر فقط تیکت‌های خودش را می‌بیند.
-        """
         return Ticket.objects.filter(user=self.request.user).order_by('-updated_at')
 
     def perform_create(self, serializer):
-        """
-        هنگام ساخت تیکت جدید، کاربر به صورت خودکار کاربر لاگین شده تعیین می‌شود.
-        """
         serializer.save(user=self.request.user)
 
+
 class TicketMessageViewSet(viewsets.ModelViewSet):
-    """
-    این ViewSet اجازه می‌دهد کاربران به تیکت‌های خود پیام اضافه کنند.
-    """
     serializer_class = TicketMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        کاربران فقط پیام‌های مربوط به تیکت‌های خودشان را می‌بینند.
-        """
         return TicketMessage.objects.filter(ticket__user=self.request.user).order_by('created_at')
-    
+
     def perform_create(self, serializer):
-        """
-        هنگام ارسال پیام، کاربر به صورت خودکار کاربر لاگین شده تعیین می‌شود.
-        """
-        # TODO: در حالت پیشرفته‌تر، باید چک کرد که آیا کاربر اجازه ارسال پیام به این تیکت را دارد یا خیر.
         serializer.save(user=self.request.user)

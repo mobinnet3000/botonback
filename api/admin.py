@@ -1,120 +1,147 @@
 # api/admin.py
 
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import LabProfile, Project, Sample, SamplingSeries, Mold
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-# --- مدیریت یکپارچه User و LabProfile ---
+from .models import (
+    LabProfile, Project, Sample, SamplingSeries, SamplingSeriesPhoto,
+    Mold, Transaction, Ticket, TicketMessage
+)
 
-# ابتدا مدل پیش‌فرض User را از حالت ثبت خارج می‌کنیم
-admin.site.unregister(User)
-
-# یک Inline برای LabProfile می‌سازیم تا در صفحه User نمایش داده شود
+# --- User & LabProfile ---
 class LabProfileInline(admin.StackedInline):
     model = LabProfile
     can_delete = False
     verbose_name_plural = 'پروفایل آزمایشگاه'
-    fk_name = 'user'
-    # فیلدها را برای نمایش بهتر دسته‌بندی می‌کنیم
-    fieldsets = (
-        (None, {
-            'fields': ('lab_name', 'lab_mobile_number', 'lab_phone_number')
-        }),
-        ('اطلاعات مکانی', {
-            'fields': ('province', 'city', 'lab_address')
-        }),
-        ('اطلاعات اضافی', {
-            'fields': ('telegram_id',)
-        }),
-    )
 
-# یک کلاس ادمین سفارشی برای User می‌سازیم
+
 class CustomUserAdmin(BaseUserAdmin):
     inlines = (LabProfileInline,)
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'get_lab_name')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'get_lab_name')
 
-    def get_lab_name(self, instance):
-        # یک ستون جدید برای نمایش نام آزمایشگاه در لیست کاربران
-        try:
-            return instance.lab_profile.lab_name
-        except LabProfile.DoesNotExist:
-            return "پروفایل آزمایشگاه ندارد"
+    def get_lab_name(self, obj):
+        return getattr(obj.lab_profile, 'lab_name', '-')
     get_lab_name.short_description = 'نام آزمایشگاه'
 
-# مدل User را با ادمین سفارشی خودمان دوباره ثبت می‌کنیم
+
+admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
 
 
-# --- مدیریت پیشرفته مدل‌های دیگر ---
-
-class MoldInline(admin.TabularInline):
-    model = Mold
-    extra = 0 # به صورت پیش‌فرض هیچ فرم خالی اضافه‌ای نمایش نده
-    fields = ('sample_identifier', 'age_in_days', 'deadline', 'mass', 'breaking_load', 'completed_at')
-    readonly_fields = ('created_at',)
-
-@admin.register(SamplingSeries)
-class SamplingSeriesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'sample_info', 'concrete_temperature', 'slump', 'has_additive')
-    list_filter = ('has_additive',)
-    inlines = [MoldInline] # نمایش قالب‌ها در صفحه جزئیات سری نمونه
-
-    def sample_info(self, obj):
-        return f"نمونه ID: {obj.sample.id} (پروژه: {obj.sample.project.project_name})"
-    sample_info.short_description = 'اطلاعات نمونه'
-
-class SamplingSeriesInline(admin.TabularInline):
-    model = SamplingSeries
-    extra = 0
-    fields = ('concrete_temperature', 'ambient_temperature', 'slump', 'has_additive')
-
-@admin.register(Sample)
-class SampleAdmin(admin.ModelAdmin):
-    list_display = ('id', 'project', 'date', 'test_type', 'category')
-    list_filter = ('test_type', 'category', 'date')
-    search_fields = ('project__project_name', 'test_type')
-    inlines = [SamplingSeriesInline]
-
-class SampleInline(admin.TabularInline):
-    model = Sample
-    extra = 0
-    fields = ('date', 'test_type', 'category')
-
+# --- Project ---
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    # ستون‌هایی که در لیست پروژه‌ها نمایش داده می‌شود
-    list_display = ('project_name', 'owner_lab_name', 'client_name', 'city', 'floor_count')
-    
-    # اضافه کردن قابلیت فیلتر بر اساس
-    list_filter = ('owner__province', 'owner__city', 'project_usage_type', 'cement_type')
-    
-    # اضافه کردن نوار جستجو
-    search_fields = ('project_name', 'client_name', 'owner__lab_name')
-    
-    # نمایش نمونه‌ها در صفحه جزئیات پروژه
-    inlines = [SampleInline]
-    
-    # دسته‌بندی فیلدها در صفحه ویرایش/ساخت پروژه
+    list_display = (
+        'project_name', 'file_number', 'owner', 'client_name',
+        'municipality_zone', 'project_usage_type', 'floor_count',
+        'test_type', 'contract_price', 'created_at',
+    )
+    list_filter = ('owner__city', 'test_type', 'project_usage_type')
+    search_fields = ('project_name', 'file_number', 'client_name', 'address')
     fieldsets = (
         ('اطلاعات اصلی پروژه', {
-            'fields': ('owner', 'project_name', 'file_number', 'address')
+            'fields': (
+                'owner', 'file_number', 'project_name', 'address', 'municipality_zone',
+                'project_usage_type', 'floor_count', 'occupied_area',
+                'test_type', 'contract_price',
+            )
         }),
-        ('مشخصات فنی', {
-            'fields': ('project_usage_type', 'floor_count', 'cement_type', 'occupied_area', 'mold_type')
-        }),
-        ('اشخاص مرتبط', {
-            'classes': ('collapse',), # این گروه به صورت پیش‌فرض بسته باشد
-            'fields': ('client_name', 'client_phone_number', 'supervisor_name', 'supervisor_phone_number', 'requester_name', 'requester_phone_number')
+        ('اطلاعات کارفرما/ناظر/درخواست‌دهنده', {
+            'fields': (
+                'client_name', 'client_phone_number',
+                'supervisor_name', 'supervisor_phone_number',
+                'requester_name', 'requester_phone_number',
+            )
         }),
     )
 
-    def owner_lab_name(self, obj):
-        # نمایش نام آزمایشگاه مالک
-        return obj.owner.lab_name
-    owner_lab_name.short_description = 'آزمایشگاه مالک'
 
-    def city(self, obj):
-        # نمایش شهر آزمایشگاه مالک
-        return obj.owner.city
-    city.short_description = 'شهر'
+# --- Sample ---
+class SamplingSeriesInline(admin.TabularInline):
+    model = SamplingSeries
+    extra = 0
+    fields = ('name', 'concrete_temperature', 'slump', 'axis', 'has_additive')
+
+
+@admin.register(Sample)
+class SampleAdmin(admin.ModelAdmin):
+    list_display = (
+        'project', 'date', 'category', 'cement_grade', 'cement_type',
+        'ambient_temperature', 'sampling_volume', 'specimen_type', 'specimen_size',
+    )
+    list_filter = ('specimen_type', 'specimen_size', 'cement_type')
+    search_fields = (
+        'project__project_name', 'category', 'sampling_location', 'concrete_factory',
+    )
+    fieldsets = (
+        ('اطلاعات نمونه', {
+            'fields': (
+                'project', 'date', 'category', 'weather_condition', 'ambient_temperature',
+                'sampling_volume', 'cement_grade', 'cement_type',
+                'specimen_type', 'specimen_size',
+                'sampling_location', 'concrete_factory', 'concrete_production_method',
+            )
+        }),
+    )
+    inlines = [SamplingSeriesInline]
+
+
+# --- Sampling Series ---
+class MoldInline(admin.TabularInline):
+    model = Mold
+    extra = 0
+    fields = ('age_in_days', 'mass', 'breaking_load', 'deadline', 'pre_break_image', 'post_break_image')
+
+
+class SamplingSeriesPhotoInline(admin.TabularInline):
+    model = SamplingSeriesPhoto
+    extra = 0
+    fields = ('image',)
+
+
+@admin.register(SamplingSeries)
+class SamplingSeriesAdmin(admin.ModelAdmin):
+    list_display = ('sample', 'name', 'concrete_temperature', 'slump', 'axis', 'has_additive')
+    search_fields = ('name', 'sample__category')
+    inlines = [MoldInline, SamplingSeriesPhotoInline]
+    fields = (
+        'sample', 'name', 'concrete_temperature', 'concrete_temperature_image',
+        'slump', 'slump_image', 'axis', 'has_additive',
+    )
+
+
+# --- Mold ---
+@admin.register(Mold)
+class MoldAdmin(admin.ModelAdmin):
+    list_display = ('series', 'age_in_days', 'mass', 'breaking_load', 'deadline', 'is_done_display')
+    fields = (
+        'series', 'age_in_days', 'mass', 'breaking_load', 'deadline',
+        'sample_identifier', 'extra_data', 'pre_break_image', 'post_break_image',
+    )
+
+    def is_done_display(self, obj):
+        return obj.breaking_load is not None and obj.breaking_load > 0
+    is_done_display.short_description = 'شکسته شده؟'
+
+
+# --- Transaction ---
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ('project', 'type', 'amount', 'date')
+    list_filter = ('type', 'project')
+    search_fields = ('project__project_name',)
+
+
+# --- Ticket & TicketMessage ---
+@admin.register(Ticket)
+class TicketAdmin(admin.ModelAdmin):
+    list_display = ('title', 'user', 'status', 'priority', 'updated_at')
+    list_filter = ('status', 'priority')
+    search_fields = ('title', 'user__username')
+
+
+@admin.register(TicketMessage)
+class TicketMessageAdmin(admin.ModelAdmin):
+    list_display = ('ticket', 'user', 'created_at')
+    search_fields = ('ticket__title', 'user__username')

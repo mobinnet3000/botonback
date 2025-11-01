@@ -1,27 +1,31 @@
 # api/serializers.py
 
-from django.db import transaction # ! <<-- ایمپورت فراموش شده برای تراکنش
+from math import ceil
+from datetime import timedelta
+from django.utils import timezone
+from django.db import transaction
+from django.db.models import Sum
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
-from api.tests import namee
-from .models import LabProfile, Project, Sample, SamplingSeries, Mold, Ticket, TicketMessage 
-from django.db.models import Sum, Q # برای محاسبات روی دیتابیس
-from .models import Transaction # مدل جدید را ایمپورت کنید
+from .models import (
+    LabProfile, Project, Sample, SamplingSeries, SamplingSeriesPhoto,
+    Mold, Transaction, Ticket, TicketMessage
+)
 
-from datetime import timedelta
-from django.utils import timezone
-
+# ----------------------
+# Transaction
+# ----------------------
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = '__all__'
+        fields = ['id', 'project', 'type', 'description', 'amount', 'date']
 
-# --- سریالایزر ثبت نام ---
+
+# ----------------------
+# ثبت نام کاربر + ساخت پروفایل
+# ----------------------
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """
-    این سریالایزر فقط برای گرفتن دیتا و ساختن کاربر استفاده می‌شود (فقط نوشتن).
-    """
     lab_name = serializers.CharField(required=True, write_only=True)
     lab_mobile_number = serializers.CharField(required=True, write_only=True)
     lab_address = serializers.CharField(required=True, write_only=True)
@@ -29,20 +33,19 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     city = serializers.CharField(required=True, write_only=True)
     lab_phone_number = serializers.CharField(required=False, allow_blank=True, write_only=True)
     telegram_id = serializers.CharField(required=False, allow_blank=True, write_only=True)
-    
+
     class Meta:
         model = User
-        # در Meta فقط فیلدهایی را نگه می‌داریم که مستقیماً روی مدل User هستند.
-        fields = ['username', 'password', 'first_name', 'last_name', 'email',
-                  # فیلدهای زیر فقط در ورودی دریافت می‌شوند و در Meta نیستند
-                  'lab_name', 'lab_mobile_number', 'lab_address', 'province',
-                  'city', 'lab_phone_number', 'telegram_id']
-        
+        fields = [
+            'username', 'password', 'first_name', 'last_name', 'email',
+            'lab_name', 'lab_mobile_number', 'lab_address', 'province',
+            'city', 'lab_phone_number', 'telegram_id'
+        ]
         extra_kwargs = {
             'password': {'write_only': True}
         }
 
-    @transaction.atomic # تضمین می‌کند که User و LabProfile با هم ساخته می‌شوند یا هیچکدام
+    @transaction.atomic
     def create(self, validated_data):
         profile_data = {
             'lab_name': validated_data.pop('lab_name'),
@@ -51,88 +54,84 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'province': validated_data.pop('province'),
             'city': validated_data.pop('city'),
             'lab_phone_number': validated_data.pop('lab_phone_number', ''),
-            'telegram_id': validated_data.pop('telegram_id', None)
+            'telegram_id': validated_data.pop('telegram_id', None),
         }
-        
         user = User.objects.create_user(**validated_data)
         LabProfile.objects.create(user=user, **profile_data)
         return user
 
-# --- سریالایزرهای CRUD ---
 
+# ----------------------
+# Mold
+# ----------------------
 class MoldSerializer(serializers.ModelSerializer):
     is_done = serializers.SerializerMethodField()
+
     class Meta:
         model = Mold
         fields = [
-            'id',
-            'series',
-            'age_in_days',
-            'mass',
-            'breaking_load',
-            'created_at',
-            'completed_at',
-            'deadline',
-            'sample_identifier',
-            'extra_data',
-            'is_done', # اضافه کردن فیلد جدید به لیست
+            'id', 'series', 'age_in_days', 'mass', 'breaking_load',
+            'created_at', 'completed_at', 'deadline', 'sample_identifier',
+            'extra_data', 'pre_break_image', 'post_break_image', 'is_done',
         ]
-        # برای جلوگیری از آپدیت ناخواسته، می‌توان برخی فیلدها را در زمان آپدیت فقط خواندنی کرد
-        read_only_fields = ['id', 'created_at', 'deadline', 'series', 'age_in_days', 'is_done']
+        read_only_fields = [
+            'id', 'created_at', 'deadline', 'series', 'age_in_days', 'is_done',
+        ]
 
     def get_is_done(self, obj):
-        """
-        این متد وضعیت 'is_done' را بر اساس منطق شما محاسبه می‌کند.
-        اگر بار گسیختگی (breaking_load) مقداری داشته باشد، یعنی قالب شکسته شده است.
-        """
         return obj.breaking_load is not None and obj.breaking_load > 0
 
     def update(self, instance, validated_data):
-        print("--- DEBUG: Inside Serializer Update ---")
-        print("Received data:", validated_data)
-        
         instance.mass = validated_data.get('mass', instance.mass)
         instance.breaking_load = validated_data.get('breaking_load', instance.breaking_load)
         instance.completed_at = validated_data.get('completed_at', instance.completed_at)
-        
+        if 'pre_break_image' in validated_data:
+            instance.pre_break_image = validated_data['pre_break_image']
+        if 'post_break_image' in validated_data:
+            instance.post_break_image = validated_data['post_break_image']
         instance.save()
-        print("--- DEBUG: Data saved! ---")
         return instance
 
+
+# ----------------------
+# Sampling Series Photos
+# ----------------------
+class SamplingSeriesPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SamplingSeriesPhoto
+        fields = ['id', 'series', 'image', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+# ----------------------
+# Sampling Series
+# ----------------------
 class SamplingSeriesWriteSerializer(serializers.ModelSerializer):
-    """
-    این سریالایزر هنگام ساخت یک سری نمونه، لیستی از سن قالب‌ها را نیز دریافت کرده
-    و به صورت خودکار قالب‌های مربوطه را ایجاد می‌کند.
-    """
-    # این فیلد جدید برای گرفتن لیست سن قالب‌ها است
     mold_ages = serializers.ListField(
         child=serializers.IntegerField(min_value=1),
-        write_only=True,  # این فیلد فقط در ورودی (ساخت) دریافت می‌شود و در خروجی نمایش داده نمی‌شود
+        write_only=True,
         required=True,
         help_text="لیستی از سن قالب‌ها برای ساخت خودکار. مثال: [7, 28]"
     )
 
     class Meta:
         model = SamplingSeries
-        # فیلدهای مدل به همراه فیلد جدید ما
         fields = [
-            'id', 'sample', 'concrete_temperature', 'ambient_temperature',
-            'slump', 'range', 'air_percentage', 'has_additive', 'mold_ages'
+            'id', 'sample', 'name',
+            'concrete_temperature', 'concrete_temperature_image',
+            'slump', 'slump_image',
+            'axis', 'has_additive',
+            'mold_ages',
         ]
-    
-    @transaction.atomic  # تضمین می‌کند که تمام عملیات با هم انجام شوند یا هیچکدام
+
+    @transaction.atomic
     def create(self, validated_data):
-        # ۱. لیست سن قالب‌ها را از داده‌های ورودی جدا می‌کنیم
-        mold_ages = validated_data.pop('mold_ages')
-        
-        # ۲. ابتدا آبجکت اصلی سری نمونه‌گیری را می‌سازیم
+        mold_ages = validated_data.pop('mold_ages', [])
         series_instance = SamplingSeries.objects.create(**validated_data)
 
-        # ۳. حالا به تعداد سن‌های داده شده، لیست قالب‌ها را برای ساخت آماده می‌کنیم
         molds_to_create = []
         now = timezone.now()
-        
-        for i, age in enumerate(mold_ages):
+        for age in mold_ages:
             molds_to_create.append(
                 Mold(
                     series=series_instance,
@@ -140,173 +139,209 @@ class SamplingSeriesWriteSerializer(serializers.ModelSerializer):
                     mass=0.0,
                     breaking_load=0.0,
                     deadline=now + timedelta(days=age),
-                    # یک شناسه پیش‌فرض برای نمونه قالب می‌سازیم
-                    sample_identifier=f"{series_instance.sample.category}-{age}روزه-{namee(series_instance)}"
+                    sample_identifier=f"{series_instance.sample.category}-{age}روزه-{series_instance.name or series_instance.id}",
                 )
             )
-        
-        # ۴. با استفاده از bulk_create، تمام قالب‌ها را به صورت بهینه و در یک کوئری به دیتابیس اضافه می‌کنیم
         if molds_to_create:
             Mold.objects.bulk_create(molds_to_create)
-            
+
         return series_instance
-     
+
 
 class SamplingSeriesReadSerializer(serializers.ModelSerializer):
-    # ! <<-- ۱. یک فیلد جدید برای نام محاسباتی تعریف می‌کنیم --!
     name = serializers.SerializerMethodField()
-    
-    # فیلد قبلی برای نمایش قالب‌ها
     molds = MoldSerializer(many=True, read_only=True)
+    photos = SamplingSeriesPhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = SamplingSeries
-        # ! <<-- ۲. نام فیلد جدید را به لیست فیلدها اضافه می‌کنیم --!
-        fields = ['id', 'name', 'concrete_temperature', 'ambient_temperature', 'slump', 'range', 'air_percentage', 'has_additive', 'molds', 'sample']
-    
-    # ! <<-- ۳. متد محاسباتی برای تولید نام را پیاده‌سازی می‌کنیم --!
+        fields = [
+            'id', 'sample', 'name',
+            'concrete_temperature', 'concrete_temperature_image',
+            'slump', 'slump_image',
+            'axis', 'has_additive',
+            'molds', 'photos',
+        ]
+
     def get_name(self, obj: SamplingSeries) -> str:
-        """
-        این متد نام ترتیبی هر سری نمونه را بر اساس ترتیب ساخت آن تولید می‌کند.
-        """
-        # اگر سری نمونه به هیچ نمونه‌ای وصل نبود (برای جلوگیری از خطا)
+        if obj.name:
+            return obj.name
+
         if not obj.sample:
             return "سری نمونه نامشخص"
-            
-        # تمام سری‌های مربوط به همان نمونه را به ترتیب آی‌دی (زمان ساخت) می‌گیریم
+
         all_series_for_sample = obj.sample.series.order_by('id').all()
-        
-        # موقعیت (ایندکس) سری فعلی را در لیست پیدا می‌کنیم
         try:
-            # تبدیل به لیست برای استفاده از متد index
             series_list = list(all_series_for_sample)
             index = series_list.index(obj)
-            # ایندکس از صفر شروع می‌شود، پس ۱ واحد به آن اضافه می‌کنیم
-            return f"سری نمونه {index + 1}"
+            return f"{obj.sample.category}-{index + 1}"
         except ValueError:
-            # اگر به هر دلیلی پیدا نشد
-            return "سری نمونه ؟"
-        
+            return f"{obj.sample.category}-?"
+
+
+# ----------------------
+# Sample
+# ----------------------
 class SampleWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sample
-        fields = '__all__'
- 
-class ProjectWriteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = '__all__'
-        read_only_fields = ('owner', 'created_at')
+        fields = [
+            'id', 'project', 'date',
+            'sampling_volume', 'cement_grade', 'cement_type',
+            'category', 'weather_condition', 'ambient_temperature',
+            'concrete_factory', 'specimen_type', 'specimen_size',
+            'sampling_location', 'concrete_production_method',
+        ]
+
+    def validate(self, attrs):
+        specimen_type = attrs.get('specimen_type')
+        specimen_size = attrs.get('specimen_size')
+
+        if specimen_type == 'cube' and specimen_size != 'cube_15':
+            raise serializers.ValidationError("برای نمونه مکعبی فقط سایز 15x15x15 مجاز است.")
+        if specimen_type == 'cylinder' and specimen_size not in ('cyl_300_150', 'cyl_200_100'):
+            raise serializers.ValidationError("برای نمونه استوانه‌ای فقط یکی از سایزهای 300x150 یا 200x100 مجاز است.")
+
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        sample = super().create(validated_data)
+
+        volume = sample.sampling_volume or 0.0
+        series_count = ceil(volume / 30.0) if volume > 0 else 0
+
+        for i in range(series_count):
+            SamplingSeries.objects.create(
+                sample=sample,
+                name=f"{sample.category}-{i + 1}",
+                concrete_temperature=0.0,
+                slump=0.0,
+                axis='',
+                has_additive=False,
+            )
+
+        return sample
+
 
 class SampleReadSerializer(SampleWriteSerializer):
     series = SamplingSeriesReadSerializer(many=True, read_only=True)
 
+    class Meta(SampleWriteSerializer.Meta):
+        fields = SampleWriteSerializer.Meta.fields + ['series']
 
+
+# ----------------------
+# Project
+# ----------------------
 class ProjectWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = '__all__'
+        fields = [
+            'id', 'owner', 'created_at',
+            'file_number', 'project_name',
+            'client_name', 'client_phone_number',
+            'supervisor_name', 'supervisor_phone_number',
+            'requester_name', 'requester_phone_number',
+            'municipality_zone', 'address',
+            'project_usage_type', 'floor_count',
+            'test_type',
+            'occupied_area', 'contract_price',
+        ]
         read_only_fields = ('owner', 'created_at')
+
 
 class ProjectReadSerializer(ProjectWriteSerializer):
     samples = SampleReadSerializer(many=True, read_only=True)
+    transactions = TransactionSerializer(many=True, read_only=True)
     created_at = serializers.DateTimeField(read_only=True, format="%Y-%m-%dT%H:%M:%S")
-    transactions = TransactionSerializer(many=True, read_only=True) # لیست تراکنش‌ها
-    # ! <<-- فیلدهای محاسباتی برای خلاصه مالی --!
+
     total_income = serializers.SerializerMethodField()
     total_expense = serializers.SerializerMethodField()
     balance = serializers.SerializerMethodField()
 
-    class Meta:
-        model = Project
-        # ! <<-- راه‌حل: لیست کامل فیلدها را به صورت صریح تعریف می‌کنیم --!
-        fields = [
-            'id', 'owner', 'created_at', 'file_number', 'project_name', 'client_name', 
-            'client_phone_number', 'supervisor_name', 'supervisor_phone_number', 
-            'requester_name', 'requester_phone_number', 'municipality_zone', 
-            'address', 'project_usage_type', 'floor_count', 'cement_type', 
-            'occupied_area', 'mold_type', 'contract_price',
-            # فیلدهای تو در تو و محاسباتی
+    class Meta(ProjectWriteSerializer.Meta):
+        fields = ProjectWriteSerializer.Meta.fields + [
             'samples', 'transactions', 'total_income', 'total_expense', 'balance'
         ]
+
     def get_total_income(self, obj: Project):
-        # با استفاده از aggregate، جمع تمام واریزی‌ها را از دیتابیس محاسبه می‌کنیم
         total = obj.transactions.filter(type='income').aggregate(total=Sum('amount'))['total']
         return total or 0.0
 
     def get_total_expense(self, obj: Project):
         total = obj.transactions.filter(type='expense').aggregate(total=Sum('amount'))['total']
         return total or 0.0
-    
+
     def get_balance(self, obj: Project):
-        income = self.get_total_income(obj)
-        expense = self.get_total_expense(obj)
-        return income - expense
+        return self.get_total_income(obj) - self.get_total_expense(obj)
 
 
+# ----------------------
+# Lab Profile
+# ----------------------
 class LabProfileSerializer(serializers.ModelSerializer):
-
     first_name = serializers.CharField(source='user.first_name', required=False)
     last_name = serializers.CharField(source='user.last_name', required=False)
     email = serializers.EmailField(source='user.email', required=False)
-    
+
     class Meta:
         model = LabProfile
-        fields = ['id', 'lab_name', 'lab_phone_number', 'lab_mobile_number', 
-                  'lab_address', 'province', 'city', 'telegram_id', 
-                  'first_name', 'last_name', 'email', 'user']
+        fields = [
+            'id', 'lab_name', 'lab_phone_number', 'lab_mobile_number',
+            'lab_address', 'province', 'city', 'telegram_id',
+            'first_name', 'last_name', 'email', 'user',
+        ]
         read_only_fields = ('user',)
 
     def update(self, instance, validated_data):
-        # آپدیت همزمان User و LabProfile
         if 'user' in validated_data:
             user_data = validated_data.pop('user')
             user = instance.user
-            
             user.first_name = user_data.get('first_name', user.first_name)
             user.last_name = user_data.get('last_name', user.last_name)
             user.email = user_data.get('email', user.email)
             user.save()
-        
         return super().update(instance, validated_data)
-    
 
+
+# ----------------------
+# Ticketing
+# ----------------------
 class TicketMessageSerializer(serializers.ModelSerializer):
-    """
-    سریالایزر برای خواندن و نوشتن پیام‌های تیکت.
-    """
-    # نام کاربری را برای نمایش در پاسخ اضافه می‌کنیم (فقط خواندنی)
     username = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = TicketMessage
         fields = ['id', 'ticket', 'user', 'username', 'message', 'created_at']
-        read_only_fields = ('user', 'created_at', 'username') # کاربر از روی درخواست لاگین شده تعیین می‌شود
+        read_only_fields = ('user', 'created_at', 'username')
+
 
 class TicketSerializer(serializers.ModelSerializer):
-    """
-    سریالایزر برای خواندن و مدیریت تیکت‌ها.
-    """
-    # پیام‌ها به صورت تودرتو در هنگام خواندن نمایش داده می‌شوند
     messages = TicketMessageSerializer(many=True, read_only=True)
-    # نام کاربر برای نمایش در لیست
     username = serializers.CharField(source='user.username', read_only=True)
-    # نمایش متن خوانا برای وضعیت و اولویت
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
 
     class Meta:
         model = Ticket
         fields = [
-            'id', 'title', 'user', 'username', 'status', 'status_display', 
-            'priority', 'priority_display', 'created_at', 'updated_at', 'messages'
+            'id', 'title', 'user', 'username', 'status', 'status_display',
+            'priority', 'priority_display', 'created_at', 'updated_at', 'messages',
         ]
         read_only_fields = ('user', 'created_at', 'updated_at', 'username', 'status_display', 'priority_display')
+
+
+# ----------------------
+# Full User Data
+# ----------------------
 class UserForFullDataSerializer(serializers.ModelSerializer):
     lab_profile = LabProfileSerializer(read_only=True)
     tickets = TicketSerializer(many=True, read_only=True)
 
-    class Meta: model = User; fields = ['id', 'username', 'first_name', 'last_name', 'email', 'lab_profile' , 'tickets']
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'lab_profile', 'tickets']
 
 
 class FullUserDataSerializer(serializers.Serializer):
