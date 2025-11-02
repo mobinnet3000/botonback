@@ -234,6 +234,9 @@ class SampleReadSerializer(SampleWriteSerializer):
 # ----------------------
 # Project
 # ----------------------
+# ----------------------
+# Project
+# ----------------------
 class ProjectWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
@@ -249,6 +252,59 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             'occupied_area', 'contract_price',
         ]
         read_only_fields = ('owner', 'created_at')
+
+    @transaction.atomic
+    def create(self, validated_data):
+        """
+        هنگام ساخت پروژه، نمونه‌ها (Samples) را بر اساس تعداد طبقه به‌صورت خودکار می‌سازد
+        و برای هر نمونه، تعداد سری‌ها را بر اساس حجم بتن‌ریزی می‌سازد.
+        """
+        project = super().create(validated_data)
+        floor_count = validated_data.get('floor_count', 0)
+
+        # لیست ترتیب نام‌های نمونه بر اساس فرمول 2n+1
+        sample_names = ['فنداسیون']
+        for i in range(1, floor_count + 1):
+            sample_names.append(f'ستون{i}')
+            sample_names.append(f'سقف{i}')
+
+        # ساخت نمونه‌ها
+        from math import ceil
+        from .models import Sample, SamplingSeries
+
+        for name in sample_names:
+            # برای جلوگیری از خطای خالی بودن فیلدها مقادیر پیش‌فرض منطقی می‌گذاریم
+            sample = Sample.objects.create(
+                project=project,
+                date=timezone.now(),
+                sampling_volume=70.0,  # مقدار پیش‌فرض قابل ویرایش کاربر
+                cement_grade='350',
+                cement_type='تیپ 1',
+                category=name,
+                weather_condition='آفتابی',
+                ambient_temperature=25.0,
+                concrete_factory='---',
+                specimen_type='cube',
+                specimen_size='cube_15',
+                sampling_location='کارگاه',
+                concrete_production_method='factory_batching',
+            )
+
+            # محاسبه تعداد سری‌ها براساس حجم بتن‌ریزی
+            volume = sample.sampling_volume or 0.0
+            series_count = ceil(volume / 30.0) if volume > 0 else 0
+
+            for i in range(series_count):
+                SamplingSeries.objects.create(
+                    sample=sample,
+                    name=f"{sample.category}-{i + 1}",
+                    concrete_temperature=0.0,
+                    slump=0.0,
+                    axis='',
+                    has_additive=False,
+                )
+
+        return project
 
 
 class ProjectReadSerializer(ProjectWriteSerializer):
